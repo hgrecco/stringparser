@@ -86,8 +86,12 @@ __license__ = 'MIT <http://www.opensource.org/licenses/mit-license.php>'
 __version__ = '0.1'
 
 import re
+import sys
 import string
-from io import StringIO
+if sys.version_info[0] < 3:
+    from StringIO import StringIO
+else:
+    from io import StringIO
 
 from functools import partial
 
