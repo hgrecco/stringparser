@@ -37,6 +37,7 @@ Limitations
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.2',
+        'Topic :: Text Processing'
     ],
     author='Hernan Grecco',
     author_email='hernan.grecco@gmail.com',
