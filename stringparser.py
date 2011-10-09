@@ -124,7 +124,7 @@ class Parser(object):
         pattern = StringIO()
         max_numeric = 0
         for literal, field, fmt, conv in _FORMATTER.parse(format_string):
-            pattern.write(literal)
+            pattern.write(re.escape(literal))
 
             try:
                 if field is None and fmt is None and conv is None:

@@ -26,6 +26,10 @@ class ParserTest(unittest.TestCase):
         "Parse single string"
         self._test('before {0:s} after', 'TEST')
 
+    def test_escape_re_characters(self):
+        "Parse single string"
+        self._test('before * | {0:s} [ ( * .after', 'TEST')
+
     def test_parse_single_int(self):
         "Parse single int"
         self._test('before {0:d} after', 42)
