@@ -76,8 +76,8 @@ Limitations
     ],
     author='Hernan Grecco',
     author_email='hernan.grecco@gmail.com',
-    url='https://github.com/hgrecco/stringformater',
+    url='https://github.com/hgrecco/stringparser',
     license='MIT',
-    py_modules=['stringformater'],
+    py_modules=['stringformater', ],
     zip_safe=True,
 )
