@@ -104,19 +104,61 @@ from functools import partial
 from collections import OrderedDict
 
 _FORMATTER = string.Formatter()
+
 _REG = {'s': ('.*?', str),
         'd': ('[0-9]+?', int),
         'b': ('[0-1]+?', partial(int, base=2)),
         'o': ('[0-7]+?', partial(int, base=8)),
         'x': ('[0-9a-f]+?', partial(int, base=16)),
         'X': ('[0-9A-F]+?', partial(int, base=16)),
-        'e': ('[-+]?[0-9]+\.?[0-9]+(e[-+]?[0-9]+)?', float),
-        'E': ('[-+]?[0-9]+\.?[0-9]+(E[-+]?[0-9]+)?', float),
-        'f': ('[-+]?[0-9]+\.?[0-9]+', float),
-        'F': ('[-+]?[0-9]+\.?[0-9]+', float),
-        'g': ('[-+]?[0-9]+\.?[0-9]+([eE][-+]?[0-9]+)?', float),
-        'G': ('[-+]?[0-9]+\.?[0-9]+([eE][-+]?[0-9]+)?', float),
-        '%': ('[-+]?[0-9]+\.?[0-9]+%', lambda x: float(x[:-1]) / 100)}
+        'e': ('[0-9]+\.?[0-9]+(e[-+]?[0-9]+)?', float),
+        'E': ('[0-9]+\.?[0-9]+(E[-+]?[0-9]+)?', float),
+        'f': ('[0-9]+\.?[0-9]+', float),
+        'F': ('[0-9]+\.?[0-9]+', float),
+        'g': ('[0-9]+\.?[0-9]+([eE][-+]?[0-9]+)?', float),
+        'G': ('[0-9]+\.?[0-9]+([eE][-+]?[0-9]+)?', float),
+        '%': ('[0-9]+\.?[0-9]+%', lambda x: float(x[:-1]) / 100)}
+
+_FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\^])?"
+                  "(?P<sign>[\+\- ])?(?P<alternate>#)?"
+                  "(?P<zero>0)?(?P<width>[0-9]+)?(?P<comma>[,])?"
+                  "(?P<precision>\.[0-9]+)?(?P<type>[bcdeEfFgGnosxX%]+)?")
+
+
+def fmt_to_regex(fmt):
+    """
+    [[fill]align][sign][#][0][width][,][.precision][type]
+
+    format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
+    fill        ::=  <a character other than '}'>
+    align       ::=  "<" | ">" | "=" | "^"
+    sign        ::=  "+" | "-" | " "
+    width       ::=  integer
+    precision   ::=  integer
+    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
+    """
+
+
+    align, fill, sign, alternate, zero, width, comma, precision, ctype = _FMT.search(fmt).groups()
+
+    reg, fun = _REG[ctype]
+
+    if alternate:
+        if ctype in ('o', 'x', 'X', 'b'):
+            reg = '0' + ctype + reg
+        else:
+            raise ValueError('Alternate form (#) not allowed in {} type'.format(ctype))
+
+    if sign == '-' or sign is None:
+        reg = '[-]?' + reg
+    elif sign == '+':
+        reg = '[-+]' + reg
+    elif sign == ' ':
+        reg = '[- ]' + reg
+    else:
+        raise ValueError('{} is not a valid sign'.format(sign))
+
+    return reg, fun
 
 
 class Parser(object):
@@ -131,14 +173,14 @@ class Parser(object):
         max_numeric = 0
         for literal, field, fmt, conv in _FORMATTER.parse(format_string):
             pattern.write(re.escape(literal))
-
             try:
                 if field is None and fmt is None and conv is None:
                     continue
                 if fmt is None or fmt == '':
                     reg, fun = _REG['s']
                 else:
-                    reg, fun = _REG[fmt[-1]]
+                    reg, fun = fmt_to_regex(fmt)
+                    
             except KeyError:
                 raise ValueError('{} is not an implemented format'.format(fmt))
 
