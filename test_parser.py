@@ -37,15 +37,36 @@ class ParserTest(unittest.TestCase):
     def test_parse_single_binary(self):
         "Parse single binary"
         self._test('before {0:b} after', 42)
+        self._test("{0:b}", 0)
+        self._test("{0:b}", 42)
+        self._test("{0:b}", -42)
+
+        self._test("{0:#b}", 42)
+        self._test("{0:#b}", -42)
+
+    @unittest.expectedFailure
+    def test_binary_failure(self):
+        self._test("{0:<10b}", 0)
+        self._test("{0:>10b}", 0)
+        self._test("{0:<10b}", 9)
+        self._test("{0:>10b}", 9)
+        self._test("{0:^10b}", 9)
+
+        self._test("{0:()b}", -(2**100 - 1))
+        self._test("{0:=()200b}", -(2**100 - 1))
 
     def test_parse_single_octal(self):
         "Parse single octal"
         self._test('before {0:o} after', 42)
+        self._test('before {0:#o} after', 42)
 
     def test_parse_single_hex(self):
         "Parse single hex (lower and uppercase)"
         self._test('before {0:x} after', 42)
         self._test('before {0:X} after', 42)
+
+        self._test('before {0:#x} after', 42)
+        self._test('before {0:#X} after', 42)
 
     def test_parse_single_fp_exp(self):
         "Parse single floating point exponential format (lower and uppercase)"
