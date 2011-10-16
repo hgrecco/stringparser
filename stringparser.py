@@ -72,12 +72,10 @@ Limitations
 
 - From the format string:
   `[[fill]align][sign][#][0][minimumwidth][.precision][type]`
-  only type is currently implemented.
+  only type, sign and # are currently implemented.
   This might cause trouble to match certain notation like:
 
   - decimal: '-4' written as '-     4'
-  - boolean: '1' written as 0b1'
-  - hex: 'f' written as '0xf'
   - etc
 
 - Lines are matched from beginning to end. {:d} will NOT return all
@@ -105,7 +103,12 @@ from collections import OrderedDict
 
 _FORMATTER = string.Formatter()
 
-_REG = {'s': ('.*?', str),
+# This dictionary maps each format type to a tuple containing 
+#   1. The regular expression to match the string 
+#   2. A callable that will used to convert the matched string into the 
+#      appropriate Python object.
+_REG = {None: ('.*?', str),
+        's': ('.*?', str),
         'd': ('[0-9]+?', int),
         'b': ('[0-1]+?', partial(int, base=2)),
         'o': ('[0-7]+?', partial(int, base=8)),
@@ -119,6 +122,17 @@ _REG = {'s': ('.*?', str),
         'G': ('[0-9]+\.?[0-9]+([eE][-+]?[0-9]+)?', float),
         '%': ('[0-9]+\.?[0-9]+%', lambda x: float(x[:-1]) / 100)}
 
+# This regex is used to match the parts within standard format specifier string
+#
+#    [[fill]align][sign][#][0][width][,][.precision][type]
+#
+#    format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
+#    fill        ::=  <a character other than '}'>
+#    align       ::=  "<" | ">" | "=" | "^"
+#    sign        ::=  "+" | "-" | " "
+#    width       ::=  integer
+#    precision   ::=  integer
+#    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
 _FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\^])?"
                   "(?P<sign>[\+\- ])?(?P<alternate>#)?"
                   "(?P<zero>0)?(?P<width>[0-9]+)?(?P<comma>[,])?"
@@ -126,22 +140,17 @@ _FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\^])?"
 
 
 def fmt_to_regex(fmt):
-    """
-    [[fill]align][sign][#][0][width][,][.precision][type]
-
-    format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
-    fill        ::=  <a character other than '}'>
-    align       ::=  "<" | ">" | "=" | "^"
-    sign        ::=  "+" | "-" | " "
-    width       ::=  integer
-    precision   ::=  integer
-    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
+    """ Returns the regex to match and the callable to convert from string  
+    or a standard format specifier string.
     """
 
+    (align, fill, sign, alternate, 
+     zero, width, comma, precision, ctype) = _FMT.search(fmt).groups()
 
-    align, fill, sign, alternate, zero, width, comma, precision, ctype = _FMT.search(fmt).groups()
-
-    reg, fun = _REG[ctype]
+    try:
+        reg, fun = _REG[ctype]
+    except KeyError:
+        raise ValueError('{} is not an valid type'.format(ctype))
 
     if alternate:
         if ctype in ('o', 'x', 'X', 'b'):
@@ -167,23 +176,32 @@ class Parser(object):
     """
 
     def __init__(self, format_string):
+        
+        # List of tuples (name of the field, converter function)
         self._fields = []
+
+        # If any of the fields has a non-numeric name, this variable is toggled
+        # and the return is a dictionary
         self._output_dict = False
+
         pattern = StringIO()
         max_numeric = 0
+
+        # Assembly regex, list of fields and converter function by inspecting
+        # each replacement field.
         for literal, field, fmt, conv in _FORMATTER.parse(format_string):
             pattern.write(re.escape(literal))
-            try:
-                if field is None and fmt is None and conv is None:
-                    continue
-                if fmt is None or fmt == '':
-                    reg, fun = _REG['s']
-                else:
-                    reg, fun = fmt_to_regex(fmt)
-                    
-            except KeyError:
-                raise ValueError('{} is not an implemented format'.format(fmt))
 
+            if field is None and fmt is None and conv is None:
+                continue
+
+            if fmt is None or fmt == '':
+                reg, fun = _REG['s']
+            else:
+                reg, fun = fmt_to_regex(fmt)
+
+            # Ignored fields are added as non-capturing groups
+            # Named and unnamed fields are added as capturing groups
             if field == '_':
                 pattern.write('(?:' + reg + ')')
                 continue
@@ -196,16 +214,22 @@ class Parser(object):
                     max_numeric = field
                 except ValueError:
                     self._output_dict = True
-
+            
             pattern.write('(' + reg + ')')
             self._fields.append((field, fun))
+        
         self._regex = re.compile('^' + pattern.getvalue() + '$')
 
     def __call__(self, text):
+
+        # Try to match the text with the stored regex
         mobj = self._regex.match(text)
         if mobj is None:
             raise ValueError("Could not parse "
                              "'{}' with '{}'".format(text, self._regex.pattern))
+
+        # Build a dictionary mapping the field name to the corresponding value
+        # converted from string.
         parsed = OrderedDict()
         for group, (field, fun) in zip(mobj.groups(), self._fields):
             if isinstance(field, str) and '.' in field:
@@ -215,11 +239,20 @@ class Parser(object):
                 parsed[field][prop] = fun(group)
             else:
                 parsed[field] = fun(group)
+        
+        # If during parsing, any of the fields was found to have a non-numeric 
+        # name, return directly 
         if self._output_dict:
             return parsed
+
+        # If the result contains a single object, return it without Container 
         if len(parsed) == 1:
             return tuple(parsed.values())[0]
+        
+        # For the rest (multiple fields either unnamed or numbered), 
+        # return a tuple 
         return tuple(parsed[key] for key in sorted(parsed.keys()))
+
 
 if __name__ == '__main__':
     import sys
