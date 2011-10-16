@@ -41,6 +41,8 @@ You can build a reusable parser object::
     >>> parser = Parser('The answer is {:d}')
     >>> parser('The answer is 42')
     42
+    >>> parser('The answer is 54')
+    54
 
 Or directly::
 
