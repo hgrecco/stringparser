@@ -1,9 +1,11 @@
 
 from setuptools import setup
 
+from stringparser import __version__
+
 setup(
 	name='stringparser',
-    version=0.1,
+    version=__version__,
     description="Easy to use pattern matching and information extraction",
     long_description="""
 Motivation
