@@ -17,7 +17,7 @@
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 # OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
 # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# DummyS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
@@ -31,7 +31,6 @@ information within strings. As patterns are given using the familiar format
 string specification (PEP 3101), writing them is much easier than writing 
 regular expressions (albeit less powerful).
 
-Check out the Parser docstring for examples.
 
 Examples
 --------
@@ -69,12 +68,13 @@ You can ignore some fields using _ as a name::
     >>> Parser('The {_:s} is {:d}')('The answer is 42')
     42
 
+
 Limitations
 -----------
 
 - From the format string:
   `[[fill]align][sign][#][0][minimumwidth][.precision][type]`
-  only type, sign and # are currently implemented.
+  only `type`, `sign` and `#` are currently implemented.
   This might cause trouble to match certain notation like:
 
   - decimal: '-4' written as '-     4'
@@ -93,6 +93,7 @@ __version__ = '0.2'
 
 import re
 import sys
+import copy
 import string
 if sys.version_info[0] < 3:
     from StringIO import StringIO
@@ -102,6 +103,13 @@ else:
 from functools import partial
 
 from collections import OrderedDict
+
+
+class Dummy():
+    """
+    """
+    pass
+
 
 _FORMATTER = string.Formatter()
 
@@ -128,7 +136,6 @@ _REG = {None: ('.*?', str),
 #
 #    [[fill]align][sign][#][0][width][,][.precision][type]
 #
-#    format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
 #    fill        ::=  <a character other than '}'>
 #    align       ::=  "<" | ">" | "=" | "^"
 #    sign        ::=  "+" | "-" | " "
@@ -142,8 +149,15 @@ _FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\^])?"
 
 
 def fmt_to_regex(fmt):
-    """ Returns the regex to match and the callable to convert from string  
-    or a standard format specifier string.
+    """ For a given standard format specifier string it returns
+    with the regex to match and the callable to convert from string.
+
+    Not implemented: fill, align, width precision
+
+    :param fmt: format specifier string as defined in :pep:3101
+    :type fmt: string
+    :return: (regex, converter)
+    :rtype: tuple
     """
 
     (align, fill, sign, alternate, 
@@ -172,6 +186,147 @@ def fmt_to_regex(fmt):
     return reg, fun
 
 
+def split_field_name(name):
+    """Split a compound field name into multiple simple field names.
+
+    :param name: simple or compound field name
+    """
+
+    first = True
+    for namepart in name.split('.'):
+        # Split that part by open bracket chars
+        keyparts = namepart.split('[')
+        # The first part is just a bare name
+        key = keyparts[0]
+
+        # Empty strings are not allowed as field names
+        if key == '':
+            raise ValueError("empty field name in {}".format(name))
+
+        # The first name in the sequence is used to index
+        # the args/kwargs arrays. Subsequent names are used
+        # on the result of the previous operation.
+        if first:
+            first = False
+            yield ('item', key)
+        else:
+            yield ('attribute', key)
+
+        # Now process any bracket expressions which followed
+        # the first part.
+        for key in keyparts[1:]:
+            endbracket = key.find(']')
+            if endbracket < 0 or endbracket != len(key) - 1:
+                raise ValueError("Invalid field syntax in {}".format(name))
+
+            # Strip off the closing bracket and try to coerce to int
+            key = key[:-1]
+            try:
+                key = int(key)
+            except ValueError:
+                pass
+
+            yield ('item', key)
+
+
+def build_hierarchy(field_parts, top):
+    """Build a hierarchy of dictionary and Dummy object
+
+    :param field_parts: iterable of simple field names and type
+    :param top: element to be placed on the top of the hierarchy
+    """
+    for typ, name in reversed(list(field_parts)):
+        if typ == 'attribute':
+            tmp = Dummy()
+            setattr(tmp, name, top)
+            top = tmp
+        elif typ == 'item':
+            tmp = dict()
+            tmp[name] = top
+            top = tmp
+    return top        
+
+
+def append_to_hierarchy(bottom, field_parts, top):
+    """Append hierarchy to another.
+
+    :param bottom: existing hierarchy
+    :param field_parts: iterable of simple field names and type
+    :param top: element to be placed on the top of the hierarchy
+    """
+    for typ_, name in field_parts:
+        if isinstance(bottom, dict):
+            if not typ_ == 'item':
+                raise ValueError("Incompatible {}, {}".format(typ_, name))
+            try:
+                bottom = bottom[name]
+            except KeyError:
+                bottom[name] = build_hierarchy(field_parts, top)
+                
+        elif isinstance(bottom, Dummy):
+            if not typ_ == 'attribute':
+                raise ValueError("Incompatible {}, {}".format(typ_, name))
+            try:
+                bottom = getattr(bottom, name)
+            except AttributeError:
+                setattr(bottom, name, 
+                        build_hierarchy(field_parts, top))
+        else:
+             raise ValueError("Incompatible {}, {}".format(typ_, name))
+
+
+def set_in_hierarchy(bottom, field_parts, top):
+    """Traverse a hierarchy and set the top element.
+
+    :param bottom: existing hierarchy
+    :param field_parts: iterable of simple field names and type
+    :param top: element to be placed on the top of the hierarchy
+    """
+    for typ_, name in field_parts:
+        if isinstance(bottom, dict):
+            if bottom[name] is None:
+                bottom[name] = top
+            else:
+                set_in_hierarchy(bottom[name], field_parts, top)
+        elif isinstance(bottom, Dummy):
+            if getattr(bottom, name) is None:
+                setattr(bottom, name, top)
+            else:
+                set_in_hierarchy(getattr(bottom, name), field_parts, top)
+        elif isinstance(bottom, list):
+            if bottom[int(name)] is None:
+                bottom[int(name)] = top
+            else:
+                set_in_hierarchy(bottom[int(name)], field_parts, top)
+
+
+def convert(obj):
+    """Recursively traverse template data structure converting dictionaries
+    to lists if all keys are numbers which fill the range from [0, len(keys))
+
+    :param obj: nested template data structure
+    """
+    if obj is None:
+        return obj
+
+    elif isinstance(obj, dict):
+        try:
+            keys = [int(key) for key in obj.keys()]
+            if min(keys) == 0 and max(keys) == len(keys) -1:
+                return [convert(obj[str(key)]) for key in keys]
+        except:
+            pass
+
+        for key, value in obj.items():
+            obj[key] = convert(value)
+        return obj
+
+    elif isinstance(obj, Dummy):
+        for key, value in obj.__dict__.items():
+            setattr(obj, key, convert(value))
+        return obj
+
+
 class Parser(object):
     """Callable object to parse a text line using a format string (PEP 3101) 
     as a template.
@@ -187,10 +342,12 @@ class Parser(object):
         self._output_dict = False
 
         pattern = StringIO()
-        max_numeric = 0
+        number = 0
 
-        # Assembly regex, list of fields and converter function by inspecting
-        # each replacement field.
+        # Assembly regex, list of fields, converter function,
+        # and output template data structure by inspecting
+        # each replacement field. 
+        template = OrderedDict()
         for literal, field, fmt, conv in _FORMATTER.parse(format_string):
             pattern.write(re.escape(literal))
 
@@ -207,19 +364,16 @@ class Parser(object):
             if field == '_':
                 pattern.write('(?:' + reg + ')')
                 continue
-            elif field == '':
-                max_numeric += 1
-                field = max_numeric
-            else:
-                try:
-                    field = int(field)
-                    max_numeric = field
-                except ValueError:
-                    self._output_dict = True
-            
+
+            if not field or field[0] in ('.', '['):
+                field = str(number) + field
+                number += 1
+
             pattern.write('(' + reg + ')')
             self._fields.append((field, fun))
+            append_to_hierarchy(template, split_field_name(field), None)
         
+        self._template = convert(template)
         self._regex = re.compile('^' + pattern.getvalue() + '$')
 
     def __call__(self, text):
@@ -230,30 +384,17 @@ class Parser(object):
             raise ValueError("Could not parse "
                              "'{}' with '{}'".format(text, self._regex.pattern))
 
-        # Build a dictionary mapping the field name to the corresponding value
-        # converted from string.
-        parsed = OrderedDict()
+        # Put each matched string in the corresponding output slot in the template
+        parsed = copy.deepcopy(self._template)
         for group, (field, fun) in zip(mobj.groups(), self._fields):
-            if isinstance(field, str) and '.' in field:
-                name, prop = field.split('.')
-                if not name in parsed:
-                    parsed[name] = OrderedDict()
-                parsed[field][prop] = fun(group)
-            else:
-                parsed[field] = fun(group)
-        
-        # If during parsing, any of the fields was found to have a non-numeric 
-        # name, return directly 
-        if self._output_dict:
-            return parsed
+            set_in_hierarchy(parsed, split_field_name(field), fun(group))
 
-        # If the result contains a single object, return it without Container 
-        if len(parsed) == 1:
-            return tuple(parsed.values())[0]
-        
-        # For the rest (multiple fields either unnamed or numbered), 
-        # return a tuple 
-        return tuple(parsed[key] for key in sorted(parsed.keys()))
+
+        # If the result is a list with a single object, return it without Container
+        if isinstance(parsed, list) and len(parsed) == 1:
+            return parsed[0]
+
+        return parsed
 
 
 if __name__ == '__main__':
