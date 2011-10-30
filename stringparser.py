@@ -28,7 +28,7 @@ Motivation
 
 The ``stringparser`` module provides a simple way to match patterns and extract
 information within strings. As patterns are given using the familiar format 
-string specification (PEP 3101), writing them is much easier than writing 
+string specification :pep:`3101`, writing them is much easier than writing 
 regular expressions (albeit less powerful).
 
 
@@ -89,7 +89,7 @@ Limitations
 __author__ = 'Hernan Grecco <hernan.grecco@gmail.com>'
 __license__ = 'MIT <http://www.opensource.org/licenses/mit-license.php>'
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 import re
 import sys
