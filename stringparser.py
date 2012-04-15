@@ -330,9 +330,12 @@ def convert(obj):
 class Parser(object):
     """Callable object to parse a text line using a format string (PEP 3101) 
     as a template.
+
+    :param format_string: PEP 3101 format string to be used as a template.
+    :param flags: modifies the regex expression behaviour. Passed to re.compile.
     """
 
-    def __init__(self, format_string):
+    def __init__(self, format_string, flags):
         
         # List of tuples (name of the field, converter function)
         self._fields = []
@@ -374,7 +377,7 @@ class Parser(object):
             append_to_hierarchy(template, split_field_name(field), None)
         
         self._template = convert(template)
-        self._regex = re.compile('^' + pattern.getvalue() + '$')
+        self._regex = re.compile('^' + pattern.getvalue() + '$', flags)
 
     def __call__(self, text):
 
