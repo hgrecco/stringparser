@@ -95,6 +95,10 @@ import re
 import sys
 import copy
 import string
+
+from re import (I, IGNORECASE, L, LOCALE, M, MULTILINE,
+                S, DOTALL, U, UNICODE, X, VERBOSE)
+
 if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
@@ -335,7 +339,7 @@ class Parser(object):
     :param flags: modifies the regex expression behaviour. Passed to re.compile.
     """
 
-    def __init__(self, format_string, flags):
+    def __init__(self, format_string, flags=0):
         
         # List of tuples (name of the field, converter function)
         self._fields = []
@@ -382,7 +386,7 @@ class Parser(object):
     def __call__(self, text):
 
         # Try to match the text with the stored regex
-        mobj = self._regex.match(text)
+        mobj = self._regex.search(text)
         if mobj is None:
             raise ValueError("Could not parse "
                              "'{}' with '{}'".format(text, self._regex.pattern))

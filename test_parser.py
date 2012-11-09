@@ -2,6 +2,8 @@ import unittest
 
 from collections import OrderedDict
 
+import stringparser
+
 from stringparser import Parser
 
 class Dummy():
@@ -272,6 +274,11 @@ class ParserTest(unittest.TestCase):
         "Parse fail"
         parser = Parser('before {:d} after')
         self.assertRaises(ValueError, parser, 'before bla after')
+
+    def test_multiline(self):
+        "Test multipline"
+        parser = Parser('before {:d} after', stringparser.MULTILINE)
+        self.assertEqual(parser('bla\nbefore 42 after\nbla'), 42)
 
 if __name__ == '__main__':
     unittest.main()
