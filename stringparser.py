@@ -89,7 +89,7 @@ Limitations
 __author__ = 'Hernan Grecco <hernan.grecco@gmail.com>'
 __license__ = 'MIT <http://www.opensource.org/licenses/mit-license.php>'
 
-__version__ = '0.3'
+__version__ = 0.4
 
 import re
 import sys
