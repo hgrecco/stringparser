@@ -60,13 +60,22 @@ Limitations
   the numbers in the string. Use regex for that.
 
 """
-from setuptools import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 setup(
 	name='stringparser',
-    version=0.4,
+    version='0.4.1',
+    url='http://github.com/hgrecco/stringparser',
+    py_modules=['stringparser'],
     description="Easy to use pattern matching and information extraction",
     long_description=__doc__,
+    author='Hernan Grecco',
+    author_email='hernan.grecco@gmail.com',
+    zip_safe=False,
+    license='BSD',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -75,10 +84,4 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Topic :: Text Processing'
     ],
-    author='Hernan Grecco',
-    author_email='hernan.grecco@gmail.com',
-    url='http://github.com/hgrecco/stringparser',
-    license='MIT',
-    py_modules=['stringformater', ],
-    zip_safe=True,
 )

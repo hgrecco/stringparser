@@ -1,95 +1,16 @@
-#! /usr/bin/env python
-
-# Copyright (c) 2011 Hernan Grecco
-#
-# Permission is hereby granted, free of charge, to any person
-# obtaining a copy of this software and associated documentation files
-# (the "Software"), to deal in the Software without restriction,
-# including without limitation the rights to use, copy, modify, merge,
-# publish, distribute, sublicense, and/or sell copies of the Software,
-# and to permit persons to whom the Software is furnished to do so,
-# subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be
-# included in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-# DummyS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-
+# -*- coding: utf-8 -*-
 """
-Motivation
-----------
+    stringparser
+    ~~~~~~~~~~~~
 
-The ``stringparser`` module provides a simple way to match patterns and extract
-information within strings. As patterns are given using the familiar format 
-string specification :pep:`3101`, writing them is much easier than writing 
-regular expressions (albeit less powerful).
+    A simple way to match patterns and extract information within strings without
+    typing regular expressions. It can be considered as the inverse of `format`
+    as patterns are given using the familiar format string specification :pep:`3101`.
 
-
-Examples
---------
-
-You can build a reusable parser object::
-
-    >>> parser = Parser('The answer is {:d}')
-    >>> parser('The answer is 42')
-    42
-    >>> parser('The answer is 54')
-    54
-
-Or directly::
-
-    >>> Parser('The answer is {:d}')('The answer is 42')
-    42
-
-You can retrieve many fields::
-
-    >>> Parser('The {:s} is {:d}')('The answer is 42')
-    ('answer', 42)
-
-And you can use numbered fields to order the returned tuple::
-
-    >>> Parser('The {1:s} is {0:d}')('The answer is 42')
-    (42, 'answer')
-
-Or named fields to return an OrderedDict::
-
-    >>> Parser('The {a:s} is {b:d}')('The answer is 42')
-    OrderedDict([('a', 'answer'), ('b', 42)])
-
-You can ignore some fields using _ as a name::
-
-    >>> Parser('The {_:s} is {:d}')('The answer is 42')
-    42
-
-
-Limitations
------------
-
-- From the format string:
-  `[[fill]align][sign][#][0][minimumwidth][.precision][type]`
-  only `type`, `sign` and `#` are currently implemented.
-  This might cause trouble to match certain notation like:
-
-  - decimal: '-4' written as '-     4'
-  - etc
-
-- Lines are matched from beginning to end. {:d} will NOT return all
-  the numbers in the string. Use regex for that.
-  
+    :copyright: (c) 2013 by Hernan E. Grecco.
+    :license: BSD, see LICENSE for more details.
 """
 
-
-__author__ = 'Hernan Grecco <hernan.grecco@gmail.com>'
-__license__ = 'MIT <http://www.opensource.org/licenses/mit-license.php>'
-
-__version__ = 0.4
 
 import re
 import sys
@@ -402,11 +323,3 @@ class Parser(object):
             return parsed[0]
 
         return parsed
-
-
-if __name__ == '__main__':
-    import sys
-    if len(sys.argv) != 3:
-        print('Usage: stringparser.py pattern string')
-        sys.exit(0)
-    print(Parser(sys.argv[1])(sys.argv[2]))
