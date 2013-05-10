@@ -261,6 +261,11 @@ class ParserTest(unittest.TestCase):
         "Parse many named"
         self._test_dict('before {a:d} after {b:d} end', a=42, b=43)
 
+    def test_many_scientific(self):
+        "Parse many scientific notation floats"
+        for format in 'eEgG':
+            self._test_many('before {0:'+format+'} after {1:'+format+'} end', 42.123e-10, 78.532e+25)
+
     def test_many_unnamed(self):
         "Parse many unnamed"
         self._test_many('before {:d} after {:d} end', 42, 43)
