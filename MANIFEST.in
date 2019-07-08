@@ -1,0 +1,3 @@
+include README.rst LICENSE
+include stringparser.py
+global-exclude *.pyc
