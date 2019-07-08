@@ -26,7 +26,7 @@ class ParserTest(unittest.TestCase):
     def _test_dict(self, fstring, **value):
         parser = Parser(fstring)
         text = fstring.format(**value)
-        self.assertEqual(parser(text), OrderedDict(value))
+        self.assertEqual(set(parser(text).items()), set(OrderedDict(value).items())))
 
     def test_string(self):
         "Parse single string"
@@ -259,7 +259,7 @@ class ParserTest(unittest.TestCase):
 
     def test_many_named(self):
         "Parse many named"
-        self._test_dict('before {a:d} after {b:d} end', a=42, b=43)
+        self._test_dict('before {a:d} after {b:d} end', a=42, b=23)
 
     def test_many_scientific(self):
         "Parse many scientific notation floats"
