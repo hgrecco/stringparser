@@ -67,7 +67,7 @@ except ImportError:
 
 setup(
 	name='stringparser',
-    version='0.5',
+    version='0.6.dev0',
     url='http://github.com/hgrecco/stringparser',
     py_modules=['stringparser'],
     description="Easy to use pattern matching and information extraction",
