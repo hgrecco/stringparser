@@ -174,7 +174,7 @@ class ParserTest(unittest.TestCase):
         h.seccond = 'else'
 
         fmt = 'before {0.first} after'
-        text = fmt.format(h)       
+        text = fmt.format(h)
         obj = Parser(fmt)(text)
         self.assertEqual(obj.first, h.first)
 
@@ -188,7 +188,7 @@ class ParserTest(unittest.TestCase):
         text = fmt.format(h)
         obj1, obj2 = Parser(fmt)(text)
         self.assertEqual(obj1.first, h.first)
-        self.assertEqual(obj2.second, h.second)        
+        self.assertEqual(obj2.second, h.second)
 
 
     def test_items(self):
@@ -197,7 +197,7 @@ class ParserTest(unittest.TestCase):
         h['second'] = 'else'
 
         fmt = 'before {0[first]} after'
-        text = fmt.format(h)       
+        text = fmt.format(h)
         obj = Parser(fmt)(text)
         self.assertEqual(obj['first'], h['first'])
 
@@ -211,14 +211,14 @@ class ParserTest(unittest.TestCase):
         text = fmt.format(h, h)
         obj1, obj2 = Parser(fmt)(text)
         self.assertEqual(obj1['first'], h['first'])
-        self.assertEqual(obj2['second'], h['second'])        
+        self.assertEqual(obj2['second'], h['second'])
 
     def test_items_attributes(self):
         h = Dummy()
         h.first = {'second': 'something'}
 
         fmt = 'before {0.first[second]} after'
-        text = fmt.format(h)       
+        text = fmt.format(h)
         obj = Parser(fmt)(text)
         self.assertEqual(obj.first['second'], h.first['second'])
 
@@ -228,7 +228,7 @@ class ParserTest(unittest.TestCase):
         text = fmt.format(h)
         obj = Parser(fmt)(text)
         self.assertEqual(obj['first'].second, h['first'].second)
-     
+
 
     def test_object_items(self):
         h = dict()
@@ -236,7 +236,7 @@ class ParserTest(unittest.TestCase):
         h['aprop2'] = 'second'
 
         fmt = 'before {0[aprop]} after'
-        text = fmt.format(h)       
+        text = fmt.format(h)
         obj = Parser(fmt)(text)
         self.assertEqual(obj['aprop'], h['aprop'])
 
@@ -250,7 +250,7 @@ class ParserTest(unittest.TestCase):
         text = fmt.format(h, h)
         obj1, obj2 = Parser(fmt)(text)
         self.assertEqual(obj1['aprop'], h['aprop'])
-        self.assertEqual(obj2['aprop2'], h['aprop2'])      
+        self.assertEqual(obj2['aprop2'], h['aprop2'])
 
 
     def test_many_numbered(self):
