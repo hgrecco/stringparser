@@ -11,7 +11,7 @@ install:
   - pip install coveralls
 
 script:
-  - python -bb -m coverage run -p --omit="*test*" setup.py test
+  - python -bb -m coverage run -p --include=stringparser.py --omit="*test*" setup.py test
   - coverage combine
   - coverage report -m
 
