@@ -1,0 +1,19 @@
+language: python
+
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+
+install:
+  - pip install coveralls
+
+script:
+  - python -bb -m coverage run -p --source=stringparser.py --omit="*test*" setup.py test
+  - coverage combine
+  - coverage report -m
+
+after_script:
+  - coveralls --verbose
