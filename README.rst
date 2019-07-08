@@ -22,10 +22,6 @@
     :target: https://coveralls.io/github/hgrecco/stringparser?branch=master
     :alt: Coverage
 
-.. image:: https://readthedocs.org/projects/stringparser/badge/
-    :target: http://stringparser.readthedocs.org/
-    :alt: Docs
-
 
 Motivation
 ----------
