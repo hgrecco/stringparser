@@ -26,7 +26,9 @@ class ParserTest(unittest.TestCase):
     def _test_dict(self, fstring, **value):
         parser = Parser(fstring)
         text = fstring.format(**value)
-        self.assertEqual(set(parser(text).items()), set(OrderedDict(value).items())))
+        self.assertEqual( set(parser(text).items()),
+                          set(OrderedDict(value).items())
+                        )
 
     def test_string(self):
         "Parse single string"
