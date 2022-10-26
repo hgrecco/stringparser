@@ -38,9 +38,9 @@ class Dummy():
 
 _FORMATTER = string.Formatter()
 
-# This dictionary maps each format type to a tuple containing 
-#   1. The regular expression to match the string 
-#   2. A callable that will used to convert the matched string into the 
+# This dictionary maps each format type to a tuple containing
+#   1. The regular expression to match the string
+#   2. A callable that will used to convert the matched string into the
 #      appropriate Python object.
 _REG = {None: ('.*?', str),
         's': ('.*?', str),
@@ -49,13 +49,13 @@ _REG = {None: ('.*?', str),
         'o': ('[0-7]+?', partial(int, base=8)),
         'x': ('[0-9a-f]+?', partial(int, base=16)),
         'X': ('[0-9A-F]+?', partial(int, base=16)),
-        'e': ('[0-9]+\.?[0-9]+(?:e[-+]?[0-9]+)?', float),
-        'E': ('[0-9]+\.?[0-9]+(?:E[-+]?[0-9]+)?', float),
-        'f': ('[0-9]+\.?[0-9]+', float),
-        'F': ('[0-9]+\.?[0-9]+', float),
-        'g': ('[0-9]+\.?[0-9]+(?:[eE][-+]?[0-9]+)?', float),
-        'G': ('[0-9]+\.?[0-9]+(?:[eE][-+]?[0-9]+)?', float),
-        '%': ('[0-9]+\.?[0-9]+%', lambda x: float(x[:-1]) / 100)}
+        'e': ('[0-9]+\\.?[0-9]+(?:e[-+]?[0-9]+)?', float),
+        'E': ('[0-9]+\\.?[0-9]+(?:E[-+]?[0-9]+)?', float),
+        'f': ('[0-9]+\\.?[0-9]+', float),
+        'F': ('[0-9]+\\.?[0-9]+', float),
+        'g': ('[0-9]+\\.?[0-9]+(?:[eE][-+]?[0-9]+)?', float),
+        'G': ('[0-9]+\\.?[0-9]+(?:[eE][-+]?[0-9]+)?', float),
+        '%': ('[0-9]+\\.?[0-9]+%', lambda x: float(x[:-1]) / 100)}
 
 # This regex is used to match the parts within standard format specifier string
 #
@@ -67,10 +67,10 @@ _REG = {None: ('.*?', str),
 #    width       ::=  integer
 #    precision   ::=  integer
 #    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
-_FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\^])?"
-                  "(?P<sign>[\+\- ])?(?P<alternate>#)?"
+_FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\\^])?"
+                  "(?P<sign>[\\+\\- ])?(?P<alternate>#)?"
                   "(?P<zero>0)?(?P<width>[0-9]+)?(?P<comma>[,])?"
-                  "(?P<precision>\.[0-9]+)?(?P<type>[bcdeEfFgGnosxX%]+)?")
+                  "(?P<precision>\\.[0-9]+)?(?P<type>[bcdeEfFgGnosxX%]+)?")
 
 
 def fmt_to_regex(fmt):
@@ -85,7 +85,7 @@ def fmt_to_regex(fmt):
     :rtype: tuple
     """
 
-    (align, fill, sign, alternate, 
+    (align, fill, sign, alternate,
      zero, width, comma, precision, ctype) = _FMT.search(fmt).groups()
 
     try:
@@ -169,7 +169,7 @@ def build_hierarchy(field_parts, top):
             tmp = dict()
             tmp[name] = top
             top = tmp
-    return top        
+    return top
 
 
 def append_to_hierarchy(bottom, field_parts, top):
@@ -187,14 +187,14 @@ def append_to_hierarchy(bottom, field_parts, top):
                 bottom = bottom[name]
             except KeyError:
                 bottom[name] = build_hierarchy(field_parts, top)
-                
+
         elif isinstance(bottom, Dummy):
             if not typ_ == 'attribute':
                 raise ValueError("Incompatible {}, {}".format(typ_, name))
             try:
                 bottom = getattr(bottom, name)
             except AttributeError:
-                setattr(bottom, name, 
+                setattr(bottom, name,
                         build_hierarchy(field_parts, top))
         else:
              raise ValueError("Incompatible {}, {}".format(typ_, name))
@@ -253,7 +253,7 @@ def convert(obj):
 
 
 class Parser(object):
-    """Callable object to parse a text line using a format string (PEP 3101) 
+    """Callable object to parse a text line using a format string (PEP 3101)
     as a template.
 
     :param format_string: PEP 3101 format string to be used as a template.
@@ -261,7 +261,7 @@ class Parser(object):
     """
 
     def __init__(self, format_string, flags=0):
-        
+
         # List of tuples (name of the field, converter function)
         self._fields = []
 
@@ -274,7 +274,7 @@ class Parser(object):
 
         # Assembly regex, list of fields, converter function,
         # and output template data structure by inspecting
-        # each replacement field. 
+        # each replacement field.
         template = OrderedDict()
         for literal, field, fmt, conv in _FORMATTER.parse(format_string):
             pattern.write(re.escape(literal))
@@ -300,7 +300,7 @@ class Parser(object):
             pattern.write('(' + reg + ')')
             self._fields.append((field, fun))
             append_to_hierarchy(template, split_field_name(field), None)
-        
+
         self._template = convert(template)
         self._regex = re.compile('^' + pattern.getvalue() + '$', flags)
 
