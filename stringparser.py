@@ -12,27 +12,37 @@
 """
 
 
-import re
-import sys
 import copy
+import re
 import string
-
-from re import (I, IGNORECASE, L, LOCALE, M, MULTILINE,
-                S, DOTALL, U, UNICODE, X, VERBOSE)
+import sys
+from re import (  # noqa: F401
+    DOTALL,
+    IGNORECASE,
+    LOCALE,
+    MULTILINE,
+    UNICODE,
+    VERBOSE,
+    I,
+    L,
+    M,
+    S,
+    U,
+    X,
+)
 
 if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
     from io import StringIO
 
+from collections import OrderedDict
 from functools import partial
 
-from collections import OrderedDict
 
+class Dummy:
+    """ """
 
-class Dummy():
-    """
-    """
     pass
 
 
@@ -42,20 +52,22 @@ _FORMATTER = string.Formatter()
 #   1. The regular expression to match the string
 #   2. A callable that will used to convert the matched string into the
 #      appropriate Python object.
-_REG = {None: ('.*?', str),
-        's': ('.*?', str),
-        'd': ('[0-9]+?', int),
-        'b': ('[0-1]+?', partial(int, base=2)),
-        'o': ('[0-7]+?', partial(int, base=8)),
-        'x': ('[0-9a-f]+?', partial(int, base=16)),
-        'X': ('[0-9A-F]+?', partial(int, base=16)),
-        'e': ('[0-9]+\\.?[0-9]+(?:e[-+]?[0-9]+)?', float),
-        'E': ('[0-9]+\\.?[0-9]+(?:E[-+]?[0-9]+)?', float),
-        'f': ('[0-9]+\\.?[0-9]+', float),
-        'F': ('[0-9]+\\.?[0-9]+', float),
-        'g': ('[0-9]+\\.?[0-9]+(?:[eE][-+]?[0-9]+)?', float),
-        'G': ('[0-9]+\\.?[0-9]+(?:[eE][-+]?[0-9]+)?', float),
-        '%': ('[0-9]+\\.?[0-9]+%', lambda x: float(x[:-1]) / 100)}
+_REG = {
+    None: (".*?", str),
+    "s": (".*?", str),
+    "d": ("[0-9]+?", int),
+    "b": ("[0-1]+?", partial(int, base=2)),
+    "o": ("[0-7]+?", partial(int, base=8)),
+    "x": ("[0-9a-f]+?", partial(int, base=16)),
+    "X": ("[0-9A-F]+?", partial(int, base=16)),
+    "e": ("[0-9]+\\.?[0-9]+(?:e[-+]?[0-9]+)?", float),
+    "E": ("[0-9]+\\.?[0-9]+(?:E[-+]?[0-9]+)?", float),
+    "f": ("[0-9]+\\.?[0-9]+", float),
+    "F": ("[0-9]+\\.?[0-9]+", float),
+    "g": ("[0-9]+\\.?[0-9]+(?:[eE][-+]?[0-9]+)?", float),
+    "G": ("[0-9]+\\.?[0-9]+(?:[eE][-+]?[0-9]+)?", float),
+    "%": ("[0-9]+\\.?[0-9]+%", lambda x: float(x[:-1]) / 100),
+}
 
 # This regex is used to match the parts within standard format specifier string
 #
@@ -67,14 +79,16 @@ _REG = {None: ('.*?', str),
 #    width       ::=  integer
 #    precision   ::=  integer
 #    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
-_FMT = re.compile("(?P<align>(?P<fill>[^{}])?[<>=\\^])?"
-                  "(?P<sign>[\\+\\- ])?(?P<alternate>#)?"
-                  "(?P<zero>0)?(?P<width>[0-9]+)?(?P<comma>[,])?"
-                  "(?P<precision>\\.[0-9]+)?(?P<type>[bcdeEfFgGnosxX%]+)?")
+_FMT = re.compile(
+    "(?P<align>(?P<fill>[^{}])?[<>=\\^])?"
+    "(?P<sign>[\\+\\- ])?(?P<alternate>#)?"
+    "(?P<zero>0)?(?P<width>[0-9]+)?(?P<comma>[,])?"
+    "(?P<precision>\\.[0-9]+)?(?P<type>[bcdeEfFgGnosxX%]+)?"
+)
 
 
 def fmt_to_regex(fmt):
-    """ For a given standard format specifier string it returns
+    """For a given standard format specifier string it returns
     with the regex to match and the callable to convert from string.
 
     Not implemented: fill, align, width precision
@@ -85,28 +99,29 @@ def fmt_to_regex(fmt):
     :rtype: tuple
     """
 
-    (align, fill, sign, alternate,
-     zero, width, comma, precision, ctype) = _FMT.search(fmt).groups()
+    (align, fill, sign, alternate, zero, width, comma, precision, ctype) = _FMT.search(
+        fmt
+    ).groups()
 
     try:
         reg, fun = _REG[ctype]
     except KeyError:
-        raise ValueError('{} is not an valid type'.format(ctype))
+        raise ValueError("{} is not an valid type".format(ctype))
 
     if alternate:
-        if ctype in ('o', 'x', 'X', 'b'):
-            reg = '0' + ctype + reg
+        if ctype in ("o", "x", "X", "b"):
+            reg = "0" + ctype + reg
         else:
-            raise ValueError('Alternate form (#) not allowed in {} type'.format(ctype))
+            raise ValueError("Alternate form (#) not allowed in {} type".format(ctype))
 
-    if sign == '-' or sign is None:
-        reg = '[-]?' + reg
-    elif sign == '+':
-        reg = '[-+]' + reg
-    elif sign == ' ':
-        reg = '[- ]' + reg
+    if sign == "-" or sign is None:
+        reg = "[-]?" + reg
+    elif sign == "+":
+        reg = "[-+]" + reg
+    elif sign == " ":
+        reg = "[- ]" + reg
     else:
-        raise ValueError('{} is not a valid sign'.format(sign))
+        raise ValueError("{} is not a valid sign".format(sign))
 
     return reg, fun
 
@@ -118,14 +133,14 @@ def split_field_name(name):
     """
 
     first = True
-    for namepart in name.split('.'):
+    for namepart in name.split("."):
         # Split that part by open bracket chars
-        keyparts = namepart.split('[')
+        keyparts = namepart.split("[")
         # The first part is just a bare name
         key = keyparts[0]
 
         # Empty strings are not allowed as field names
-        if key == '':
+        if key == "":
             raise ValueError("empty field name in {}".format(name))
 
         # The first name in the sequence is used to index
@@ -133,14 +148,14 @@ def split_field_name(name):
         # on the result of the previous operation.
         if first:
             first = False
-            yield ('item', key)
+            yield ("item", key)
         else:
-            yield ('attribute', key)
+            yield ("attribute", key)
 
         # Now process any bracket expressions which followed
         # the first part.
         for key in keyparts[1:]:
-            endbracket = key.find(']')
+            endbracket = key.find("]")
             if endbracket < 0 or endbracket != len(key) - 1:
                 raise ValueError("Invalid field syntax in {}".format(name))
 
@@ -151,7 +166,7 @@ def split_field_name(name):
             except ValueError:
                 pass
 
-            yield ('item', key)
+            yield ("item", key)
 
 
 def build_hierarchy(field_parts, top):
@@ -161,11 +176,11 @@ def build_hierarchy(field_parts, top):
     :param top: element to be placed on the top of the hierarchy
     """
     for typ, name in reversed(list(field_parts)):
-        if typ == 'attribute':
+        if typ == "attribute":
             tmp = Dummy()
             setattr(tmp, name, top)
             top = tmp
-        elif typ == 'item':
+        elif typ == "item":
             tmp = dict()
             tmp[name] = top
             top = tmp
@@ -181,7 +196,7 @@ def append_to_hierarchy(bottom, field_parts, top):
     """
     for typ_, name in field_parts:
         if isinstance(bottom, dict):
-            if not typ_ == 'item':
+            if not typ_ == "item":
                 raise ValueError("Incompatible {}, {}".format(typ_, name))
             try:
                 bottom = bottom[name]
@@ -189,15 +204,14 @@ def append_to_hierarchy(bottom, field_parts, top):
                 bottom[name] = build_hierarchy(field_parts, top)
 
         elif isinstance(bottom, Dummy):
-            if not typ_ == 'attribute':
+            if not typ_ == "attribute":
                 raise ValueError("Incompatible {}, {}".format(typ_, name))
             try:
                 bottom = getattr(bottom, name)
             except AttributeError:
-                setattr(bottom, name,
-                        build_hierarchy(field_parts, top))
+                setattr(bottom, name, build_hierarchy(field_parts, top))
         else:
-             raise ValueError("Incompatible {}, {}".format(typ_, name))
+            raise ValueError("Incompatible {}, {}".format(typ_, name))
 
 
 def set_in_hierarchy(bottom, field_parts, top):
@@ -237,9 +251,9 @@ def convert(obj):
     elif isinstance(obj, dict):
         try:
             keys = [int(key) for key in obj.keys()]
-            if min(keys) == 0 and max(keys) == len(keys) -1:
+            if min(keys) == 0 and max(keys) == len(keys) - 1:
                 return [convert(obj[str(key)]) for key in keys]
-        except:
+        except Exception:
             pass
 
         for key, value in obj.items():
@@ -282,41 +296,41 @@ class Parser(object):
             if field is None and fmt is None and conv is None:
                 continue
 
-            if fmt is None or fmt == '':
-                reg, fun = _REG['s']
+            if fmt is None or fmt == "":
+                reg, fun = _REG["s"]
             else:
                 reg, fun = fmt_to_regex(fmt)
 
             # Ignored fields are added as non-capturing groups
             # Named and unnamed fields are added as capturing groups
-            if field == '_':
-                pattern.write('(?:' + reg + ')')
+            if field == "_":
+                pattern.write("(?:" + reg + ")")
                 continue
 
-            if not field or field[0] in ('.', '['):
+            if not field or field[0] in (".", "["):
                 field = str(number) + field
                 number += 1
 
-            pattern.write('(' + reg + ')')
+            pattern.write("(" + reg + ")")
             self._fields.append((field, fun))
             append_to_hierarchy(template, split_field_name(field), None)
 
         self._template = convert(template)
-        self._regex = re.compile('^' + pattern.getvalue() + '$', flags)
+        self._regex = re.compile("^" + pattern.getvalue() + "$", flags)
 
     def __call__(self, text):
 
         # Try to match the text with the stored regex
         mobj = self._regex.search(text)
         if mobj is None:
-            raise ValueError("Could not parse "
-                             "'{}' with '{}'".format(text, self._regex.pattern))
+            raise ValueError(
+                "Could not parse " "'{}' with '{}'".format(text, self._regex.pattern)
+            )
 
         # Put each matched string in the corresponding output slot in the template
         parsed = copy.deepcopy(self._template)
         for group, (field, fun) in zip(mobj.groups(), self._fields):
             set_in_hierarchy(parsed, split_field_name(field), fun(group))
-
 
         # If the result is a list with a single object, return it without Container
         if isinstance(parsed, list) and len(parsed) == 1:
