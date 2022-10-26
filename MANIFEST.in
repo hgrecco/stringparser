@@ -1,4 +1,5 @@
 include README.rst LICENSE CHANGES
 include stringparser.py
 exclude .editorconfig bors.toml pull_request_template.md requirements_docs.txt version.py
+exclude .coveragerc .pre-commit-config.yaml tests/*
 global-exclude *.pyc *~ .DS_Store *__pycache__* *.pyo .travis-exclude.yml
