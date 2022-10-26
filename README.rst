@@ -2,9 +2,8 @@
     :target: https://pypi.python.org/pypi/stringparser
     :alt: Latest Version
 
-.. image:: https://readthedocs.org/projects/pip/badge/
-    :target: http://stringparser.readthedocs.org/
-    :alt: Documentation
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/python/black
 
 .. image:: https://img.shields.io/pypi/l/stringparser.svg
     :target: https://pypi.python.org/pypi/stringparser
@@ -14,9 +13,13 @@
     :target: https://pypi.python.org/pypi/stringparser
     :alt: Python Versions
 
-.. image:: https://travis-ci.org/hgrecco/stringparser.svg?branch=master
-    :target: https://travis-ci.org/hgrecco/stringparser
+.. image:: https://github.com/hgrecco/stringparser/workflows/CI/badge.svg
+    :target: https://github.com/hgrecco/stringparser/actions?query=workflow%3ACI
     :alt: CI
+
+.. image:: https://github.com/hgrecco/stringparser/workflows/Lint/badge.svg
+    :target: https://github.com/hgrecco/stringparser/actions?query=workflow%3ALint
+    :alt: LINTER
 
 .. image:: https://coveralls.io/repos/github/hgrecco/stringparser/badge.svg?branch=master
     :target: https://coveralls.io/github/hgrecco/stringparser?branch=master
