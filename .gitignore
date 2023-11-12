@@ -5,3 +5,4 @@ __pycache__
 .idea
 dist
 build
+test_readme.py

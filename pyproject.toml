@@ -35,6 +35,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 py-modules = ["stringparser"]
 
+[tool.setuptools.package-data]
+stringparser = ["py.typed"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = "requirements.txt"}
 optional-dependencies.test = {file = "requirements.test.txt"}
@@ -46,7 +49,7 @@ optional-dependencies.test = {file = "requirements.test.txt"}
 [tool.setuptools_scm]
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib --doctest-modules"
 pythonpath = "."
 
 [tool.ruff]

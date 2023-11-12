@@ -11,7 +11,6 @@
     :license: BSD, see LICENSE for more details.
 """
 
-
 import copy
 import re
 import string
@@ -31,6 +30,18 @@ from re import (  # noqa: F401
     U,
     X,
 )
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    Iterable,
+    Literal,
+    Optional,
+    Union,
+    overload,
+)
+
+from typing_extensions import TypeAlias
 
 
 class Dummy:
@@ -45,7 +56,21 @@ _FORMATTER = string.Formatter()
 #   1. The regular expression to match the string
 #   2. A callable that will used to convert the matched string into the
 #      appropriate Python object.
-_REG = {
+
+REGEX2CONVERTER: TypeAlias = tuple[
+    str,
+    Union[
+        type,
+        Callable[
+            [
+                str,
+            ],
+            Any,
+        ],
+    ],
+]
+
+_REG: dict[Optional[str], REGEX2CONVERTER] = {
     None: (".*?", str),
     "s": (".*?", str),
     "d": ("[0-9]+?", int),
@@ -73,7 +98,7 @@ _REG = {
 #    precision   ::=  integer
 #    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o"
 #                     | "s" | "x" | "X" | "%"
-_FMT = re.compile(
+_FMT: re.Pattern[str] = re.compile(
     "(?P<align>(?P<fill>[^{}])?[<>=\\^])?"
     "(?P<sign>[\\+\\- ])?(?P<alternate>#)?"
     "(?P<zero>0)?(?P<width>[0-9]+)?(?P<comma>[,])?"
@@ -81,7 +106,7 @@ _FMT = re.compile(
 )
 
 
-def fmt_to_regex(fmt):
+def fmt_to_regex(fmt: str) -> REGEX2CONVERTER:
     """For a given standard format specifier string it returns
     with the regex to match and the callable to convert from string.
 
@@ -93,12 +118,25 @@ def fmt_to_regex(fmt):
     :rtype: tuple
     """
 
-    (align, fill, sign, alternate, zero, width, comma, precision, ctype) = _FMT.search(
-        fmt
-    ).groups()
+    matched = _FMT.search(fmt)
+
+    if matched is None:
+        raise ValueError(f"Could not parse the formatting string {fmt}")
+
+    (
+        _align,
+        _fill,
+        sign,
+        alternate,
+        _zero,
+        _width,
+        _comma,
+        _precision,
+        ctype,
+    ) = matched.groups(default=None)
 
     try:
-        reg, fun = _REG[ctype]
+        reg, fun = _REG[ctype]  # typing: ignore
     except KeyError:
         raise ValueError("{} is not an valid type".format(ctype))
 
@@ -120,7 +158,12 @@ def fmt_to_regex(fmt):
     return reg, fun
 
 
-def split_field_name(name):
+ITEM_ATTR: TypeAlias = Union[
+    tuple[Literal["attribute"], str], tuple[Literal["item"], Any]
+]
+
+
+def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
     """Split a compound field name into multiple simple field names.
 
     :param name: simple or compound field name
@@ -156,19 +199,18 @@ def split_field_name(name):
             # Strip off the closing bracket and try to coerce to int
             key = key[:-1]
             try:
-                key = int(key)
+                yield ("item", int(key))
             except ValueError:
-                pass
-
-            yield ("item", key)
+                yield ("item", key)
 
 
-def build_hierarchy(field_parts, top):
+def build_hierarchy(field_parts: Iterable[ITEM_ATTR], top: Any) -> Any:
     """Build a hierarchy of dictionary and Dummy object
 
     :param field_parts: iterable of simple field names and type
     :param top: element to be placed on the top of the hierarchy
     """
+    tmp: Union[dict[Any, Any], Dummy]
     for typ, name in reversed(list(field_parts)):
         if typ == "attribute":
             tmp = Dummy()
@@ -181,7 +223,9 @@ def build_hierarchy(field_parts, top):
     return top
 
 
-def append_to_hierarchy(bottom, field_parts, top):
+def append_to_hierarchy(
+    bottom: Any, field_parts: Iterable[ITEM_ATTR], top: Any
+) -> None:
     """Append hierarchy to another.
 
     :param bottom: existing hierarchy
@@ -208,14 +252,14 @@ def append_to_hierarchy(bottom, field_parts, top):
             raise ValueError("Incompatible {}, {}".format(typ_, name))
 
 
-def set_in_hierarchy(bottom, field_parts, top):
+def set_in_hierarchy(bottom: Any, field_parts: Iterable[ITEM_ATTR], top: Any) -> None:
     """Traverse a hierarchy and set the top element.
 
     :param bottom: existing hierarchy
     :param field_parts: iterable of simple field names and type
     :param top: element to be placed on the top of the hierarchy
     """
-    for typ_, name in field_parts:
+    for _typ, name in field_parts:
         if isinstance(bottom, dict):
             if bottom[name] is None:
                 bottom[name] = top
@@ -233,6 +277,21 @@ def set_in_hierarchy(bottom, field_parts, top):
                 set_in_hierarchy(bottom[int(name)], field_parts, top)
 
 
+@overload
+def convert(obj: None) -> None:
+    ...
+
+
+@overload
+def convert(obj: dict[Any, Any]) -> Union[dict[Any, Any], list[Any]]:
+    ...
+
+
+@overload
+def convert(obj: Dummy) -> Dummy:
+    ...
+
+
 def convert(obj):
     """Recursively traverse template data structure converting dictionaries
     to lists if all keys are numbers which fill the range from [0, len(keys))
@@ -240,11 +299,11 @@ def convert(obj):
     :param obj: nested template data structure
     """
     if obj is None:
-        return obj
+        return None
 
     elif isinstance(obj, dict):
         try:
-            keys = [int(key) for key in obj.keys()]
+            keys = sorted([int(key) for key in obj.keys()])
             if min(keys) == 0 and max(keys) == len(keys) - 1:
                 return [convert(obj[str(key)]) for key in keys]
         except Exception:
@@ -268,13 +327,32 @@ class Parser(object):
     :param flags: modifies the regex expression behaviour. Passed to re.compile.
     """
 
-    def __init__(self, format_string, flags=0):
-        # List of tuples (name of the field, converter function)
-        self._fields = []
+    # List of tuples (name of the field, converter function)
+    _fields: list[
+        tuple[
+            str,
+            type
+            | Callable[
+                [
+                    str,
+                ],
+                Any,
+            ],
+        ]
+    ]
 
-        # If any of the fields has a non-numeric name, this variable is toggled
-        # and the return is a dictionary
-        self._output_dict = False
+    # If any of the fields has a non-numeric name, this variable is toggled
+    # and the return is a dictionary
+    _output_as_dict: bool
+
+    _template: Union[dict[Any, Any], list[Any], Dummy]
+
+    # Compiled regex pattern
+    _regex: re.Pattern[str]
+
+    def __init__(self, format_string: str, flags: re.RegexFlag = re.RegexFlag.NOFLAG):
+        self._fields = []
+        self._output_as_dict = False
 
         pattern = StringIO()
         number = 0
@@ -282,11 +360,11 @@ class Parser(object):
         # Assembly regex, list of fields, converter function,
         # and output template data structure by inspecting
         # each replacement field.
-        template = dict()
-        for literal, field, fmt, conv in _FORMATTER.parse(format_string):
+        template: dict[Any, Any] = dict()
+        for literal, field, fmt, _conv in _FORMATTER.parse(format_string):
             pattern.write(re.escape(literal))
 
-            if field is None and fmt is None and conv is None:
+            if field is None:
                 continue
 
             if fmt is None or fmt == "":
@@ -311,13 +389,11 @@ class Parser(object):
         self._template = convert(template)
         self._regex = re.compile("^" + pattern.getvalue() + "$", flags)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Union[str, list[str], dict[Any, Any], Dummy]:
         # Try to match the text with the stored regex
         mobj = self._regex.search(text)
         if mobj is None:
-            raise ValueError(
-                "Could not parse " "'{}' with '{}'".format(text, self._regex.pattern)
-            )
+            raise ValueError(f"Could not parse '{text}' with '{self._regex.pattern}'")
 
         # Put each matched string in the corresponding output slot in the template
         parsed = copy.deepcopy(self._template)

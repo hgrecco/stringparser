@@ -25,6 +25,7 @@ pip install stringparser
 You can build a reusable parser object:
 
 ```python
+>>> from stringparser import Parser
 >>> parser = Parser('The answer is {:d}')
 >>> parser('The answer is 42')
 42
@@ -57,7 +58,7 @@ Or named fields to return an OrderedDict:
 
 ```python
 >>> Parser('The {a:s} is {b:d}')('The answer is 42')
-OrderedDict([('a', 'answer'), ('b', 42)])
+{'a': 'answer', 'b': 42}
 ```
 
 You can ignore some fields using _ as a name:
