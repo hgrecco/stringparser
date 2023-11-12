@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     stringparser
     ~~~~~~~~~~~~
@@ -7,7 +6,7 @@
     typing regular expressions. It can be considered as the inverse of `format`
     as patterns are given using the familiar format string specification :pep:`3101`.
 
-    :copyright: (c) 2013 by Hernan E. Grecco.
+    :copyright: (c) 2023 by Hernan E. Grecco.
     :license: BSD, see LICENSE for more details.
 """
 
@@ -44,34 +43,39 @@ from typing import (
 from typing_extensions import TypeAlias
 
 
-class Dummy:
-    """ """
+class ObjectLike:
+    """This class is used by string parser when
+    the string formatter contains attribute
+    access such as `{0.name}`.
+    """
 
-    pass
 
+KEY_TYPES: TypeAlias = Union[str, int]
+VALUE_TYPES: TypeAlias = Union[
+    str, int, float, list["VALUE_TYPES"], dict[KEY_TYPES, "VALUE_TYPES"], ObjectLike
+]
 
 _FORMATTER = string.Formatter()
 
 # This is due to the fact that int, float, etc
 # are not recognized as Callable[[str, ], Any]
-STRCALLABLE: TypeAlias = Union[
+_STRCALLABLE: TypeAlias = Union[
     type,
     Callable[
         [
             str,
         ],
-        Any,
+        VALUE_TYPES,
     ],
 ]
 
-REGEX2CONVERTER: TypeAlias = tuple[str, STRCALLABLE]
+_REGEX2CONVERTER: TypeAlias = tuple[str, _STRCALLABLE]
 
 # This dictionary maps each format type to a tuple containing
 #   1. The regular expression to match the string
 #   2. A callable that will used to convert the matched string into the
 #      appropriate Python object.
-
-_REG: dict[Optional[str], REGEX2CONVERTER] = {
+_REG: dict[Optional[str], _REGEX2CONVERTER] = {
     None: (".*?", str),
     "s": (".*?", str),
     "d": ("[0-9]+?", int),
@@ -107,16 +111,35 @@ _FMT: re.Pattern[str] = re.compile(
 )
 
 
-def fmt_to_regex(fmt: str) -> REGEX2CONVERTER:
+def fmt_to_regex(fmt: str) -> _REGEX2CONVERTER:
     """For a given standard format specifier string it returns
     with the regex to match and the callable to convert from string.
 
-    Not implemented: fill, align, width precision
+    Parameters
+    ----------
+    fmt
+        Format specifier string as defined in :pep:3101.
 
-    :param fmt: format specifier string as defined in :pep:3101
-    :type fmt: string
-    :return: (regex, converter)
-    :rtype: tuple
+    Returns
+    -------
+        A tuple with a regex and a string to value callable.
+
+    Raises
+    ------
+    ValueError
+        If the formatting string cannot be parsed
+        or contains invalid parts.
+
+    Examples
+    --------
+    >>> fmt_to_regex("{:d})
+    ("[0-9]+?", int)
+
+
+    Notes
+    -----
+        `fill`, `align, `width`, `precision` are not implemented.
+
     """
 
     matched = _FMT.search(fmt)
@@ -159,15 +182,33 @@ def fmt_to_regex(fmt: str) -> REGEX2CONVERTER:
     return reg, fun
 
 
-ITEM_ATTR: TypeAlias = Union[
+_ITEM_ATTR: TypeAlias = Union[
     tuple[Literal["attribute"], str], tuple[Literal["item"], Any]
 ]
 
 
-def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
-    """Split a compound field name into multiple simple field names.
+def _split_field_name(name: str) -> Generator[_ITEM_ATTR, None, None]:
+    """Split a compound field name containing attribute or item
+    access into multiple simple field names.
 
-    :param name: simple or compound field name
+    For example, `x.y[0]` yields the following sequence
+    `[('item', 'x'), ('attribute', 'y'), ('item', 0)]`
+
+    Parameters
+    ----------
+    name
+        Simple or compound field name.
+
+    Yields
+    ------
+        Tuple indicating
+        - `attribute` or `index`
+        - corresponding attribute name or key
+
+    Raises
+    ------
+    ValueError
+        If the empty field is empty or is invalid.
     """
 
     first = True
@@ -179,7 +220,7 @@ def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
 
         # Empty strings are not allowed as field names
         if key == "":  # pragma: no cover
-            raise ValueError("empty field name in {}".format(name))
+            raise ValueError(f"empty field name in {name}")
 
         # The first name in the sequence is used to index
         # the args/kwargs arrays. Subsequent names are used
@@ -195,7 +236,7 @@ def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
         for key in keyparts[1:]:
             endbracket = key.find("]")
             if endbracket < 0 or endbracket != len(key) - 1:  # pragma: no cover
-                raise ValueError("Invalid field syntax in {}".format(name))
+                raise ValueError(f"Invalid field syntax in {name}")
 
             # Strip off the closing bracket and try to coerce to int
             key = key[:-1]
@@ -205,16 +246,25 @@ def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
                 yield ("item", key)
 
 
-def build_hierarchy(field_parts: Iterable[ITEM_ATTR], top: Any) -> Any:
-    """Build a hierarchy of dictionary and Dummy object
+def _build_datastructure(field_parts: Iterable[_ITEM_ATTR], top: Any) -> Any:
+    """Build a hierarchical datastructure of dictionary and ObjectLike.
 
-    :param field_parts: iterable of simple field names and type
-    :param top: element to be placed on the top of the hierarchy
+    Parameters
+    ----------
+    field_parts
+        Iterable of simple field names and type
+    top
+        Element to be placed on the top of the datastructure
+
+    Returns
+    -------
+        A hierarchical datastructure.
     """
-    tmp: Union[dict[Any, Any], Dummy]
+
+    tmp: Union[dict[Any, Any], ObjectLike]
     for typ, name in reversed(list(field_parts)):
         if typ == "attribute":
-            tmp = Dummy()
+            tmp = ObjectLike()
             setattr(tmp, name, top)
             top = tmp
         elif typ == "item":
@@ -224,80 +274,106 @@ def build_hierarchy(field_parts: Iterable[ITEM_ATTR], top: Any) -> Any:
     return top
 
 
-def append_to_hierarchy(
-    bottom: Any, field_parts: Iterable[ITEM_ATTR], top: Any
+def _append_to_datastructure(
+    bottom: Any, field_parts: Iterable[_ITEM_ATTR], top: Any
 ) -> None:
-    """Append hierarchy to another.
+    """Append datastructure to another datastructure.
 
-    :param bottom: existing hierarchy
-    :param field_parts: iterable of simple field names and type
-    :param top: element to be placed on the top of the hierarchy
+    Parameters
+    ----------
+    bottom
+        Existing datastructure.
+    field_parts
+        Iterable of simple field names and type.
+    top
+        Element to be placed on the top of the datastructure.
+
+    Raises
+    ------
+    ValueError
+        If an incompatible accesor is found for a given value.
     """
     for typ_, name in field_parts:
         if isinstance(bottom, dict):
             if not typ_ == "item":  # pragma: no cover
-                raise ValueError("Incompatible {}, {}".format(typ_, name))
+                raise ValueError(f"Incompatible {typ_}, {name}")
             try:
                 bottom = bottom[name]
             except KeyError:
-                bottom[name] = build_hierarchy(field_parts, top)
+                bottom[name] = _build_datastructure(field_parts, top)
 
-        elif isinstance(bottom, Dummy):
+        elif isinstance(bottom, ObjectLike):
             if not typ_ == "attribute":  # pragma: no cover
-                raise ValueError("Incompatible {}, {}".format(typ_, name))
+                raise ValueError(f"Incompatible {typ_}, {name}")
             try:
                 bottom = getattr(bottom, name)
             except AttributeError:  # pragma: no cover
-                setattr(bottom, name, build_hierarchy(field_parts, top))
+                setattr(bottom, name, _build_datastructure(field_parts, top))
         else:  # pragma: no cover
-            raise ValueError("Incompatible {}, {}".format(typ_, name))
+            raise ValueError(f"Incompatible {typ_}, {name}")
 
 
-def set_in_hierarchy(bottom: Any, field_parts: Iterable[ITEM_ATTR], top: Any) -> None:
-    """Traverse a hierarchy and set the top element.
+def _set_in_datastructure(
+    bottom: Any, field_parts: Iterable[_ITEM_ATTR], top: Any
+) -> None:
+    """Traverse a datastructure and set the top element.
 
-    :param bottom: existing hierarchy
-    :param field_parts: iterable of simple field names and type
-    :param top: element to be placed on the top of the hierarchy
+    Parameters
+    ----------
+    bottom
+        Existing datastructure.
+    field_parts
+        Iterable of simple field names and type
+    top
+        Element to be placed on the top of the datastructure
     """
     for _typ, name in field_parts:
         if isinstance(bottom, dict):
             if bottom[name] is None:
                 bottom[name] = top
             else:
-                set_in_hierarchy(bottom[name], field_parts, top)
-        elif isinstance(bottom, Dummy):
+                _set_in_datastructure(bottom[name], field_parts, top)
+        elif isinstance(bottom, ObjectLike):
             if getattr(bottom, name) is None:
                 setattr(bottom, name, top)
             else:
-                set_in_hierarchy(getattr(bottom, name), field_parts, top)
+                _set_in_datastructure(getattr(bottom, name), field_parts, top)
         elif isinstance(bottom, list):
             if bottom[int(name)] is None:
                 bottom[int(name)] = top
             else:
-                set_in_hierarchy(bottom[int(name)], field_parts, top)
+                _set_in_datastructure(bottom[int(name)], field_parts, top)
 
 
 @overload
-def convert(obj: None) -> None:
+def _convert(obj: None) -> None:
     ...
 
 
 @overload
-def convert(obj: dict[Any, Any]) -> Union[dict[Any, Any], list[Any]]:
+def _convert(
+    obj: dict[KEY_TYPES, VALUE_TYPES]
+) -> Union[dict[KEY_TYPES, VALUE_TYPES], list[VALUE_TYPES]]:
     ...
 
 
 @overload
-def convert(obj: Dummy) -> Dummy:
+def _convert(obj: ObjectLike) -> ObjectLike:
     ...
 
 
-def convert(obj):
+def _convert(obj):
     """Recursively traverse template data structure converting dictionaries
     to lists if all keys are numbers which fill the range from [0, len(keys))
 
-    :param obj: nested template data structure
+    Parameters
+    ----------
+    obj
+        Nested template data structure.
+
+    Returns
+    -------
+        Updated datastructure.
     """
     if obj is None:
         return None
@@ -306,41 +382,47 @@ def convert(obj):
         try:
             keys = sorted([int(key) for key in obj.keys()])
             if min(keys) == 0 and max(keys) == len(keys) - 1:
-                return [convert(obj[str(key)]) for key in keys]
+                return [_convert(obj[str(key)]) for key in keys]
         except Exception:
             pass
 
         for key, value in obj.items():
-            obj[key] = convert(value)
+            obj[key] = _convert(value)
         return obj
 
-    elif isinstance(obj, Dummy):
+    elif isinstance(obj, ObjectLike):
         for key, value in obj.__dict__.items():
-            setattr(obj, key, convert(value))
+            setattr(obj, key, _convert(value))
         return obj
 
 
 class Parser(object):
     """Callable object to parse a text line using a format string (PEP 3101)
     as a template.
-
-    :param format_string: PEP 3101 format string to be used as a template.
-    :param flags: modifies the regex expression behaviour. Passed to re.compile.
     """
 
     # List of tuples (name of the field, converter function)
-    _fields: list[tuple[str, STRCALLABLE]]
+    _fields: list[tuple[str, _STRCALLABLE]]
 
     # If any of the fields has a non-numeric name, this variable is toggled
     # and the return is a dictionary
     _output_as_dict: bool
 
-    _template: Union[dict[Any, Any], list[Any], Dummy]
+    _template: Union[dict[KEY_TYPES, VALUE_TYPES], list[VALUE_TYPES], ObjectLike]
 
     # Compiled regex pattern
     _regex: re.Pattern[str]
 
     def __init__(self, format_string: str, flags: Union[re.RegexFlag, int] = 0):
+        """_summary_
+
+        Parameters
+        ----------
+        format_string
+            PEP 3101 format string to be used as a template.
+        flags, optional
+            modifies the regex expression behaviour. Passed to re.compile, by default 0
+        """
         self._fields = []
         self._output_as_dict = False
 
@@ -374,12 +456,13 @@ class Parser(object):
 
             pattern.write("(" + reg + ")")
             self._fields.append((field, fun))
-            append_to_hierarchy(template, split_field_name(field), None)
+            _append_to_datastructure(template, _split_field_name(field), None)
 
-        self._template = convert(template)
+        self._template = _convert(template)
         self._regex = re.compile("^" + pattern.getvalue() + "$", flags)
 
-    def __call__(self, text: str) -> Union[str, list[str], dict[Any, Any], Dummy]:
+    def __call__(self, text: str) -> VALUE_TYPES:
+        """Parse a given string."""
         # Try to match the text with the stored regex
         mobj = self._regex.search(text)
         if mobj is None:
@@ -388,10 +471,13 @@ class Parser(object):
         # Put each matched string in the corresponding output slot in the template
         parsed = copy.deepcopy(self._template)
         for group, (field, fun) in zip(mobj.groups(), self._fields):
-            set_in_hierarchy(parsed, split_field_name(field), fun(group))
+            _set_in_datastructure(parsed, _split_field_name(field), fun(group))
 
         # If the result is a list with a single object, return it without Container
         if isinstance(parsed, list) and len(parsed) == 1:
             return parsed[0]
 
         return parsed
+
+
+__all__ = ["Parser"]
