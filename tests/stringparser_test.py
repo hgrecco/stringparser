@@ -33,18 +33,24 @@ def test_string():
 
 
 @pytest.mark.xfail
-def test_string_failure():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("{0:x<7s}", "result"),
+        ("{0:x<8s}", "result"),
+        ("{0: <7s}", "result"),
+        ("{0:<7s}", "result"),
+        ("{0:>7s}", "result"),
+        ("{0:>8s}", "result"),
+        ("{0:=8s}", "result"),
+        ("{0:^8s}", "result"),
+        ("{0:^9s}", "result"),
+        ("{0:^10s}", "result"),
+    ],
+)
+def test_string_failure(fstring, value):
     "Unimplemented features for string"
-    _test("{0:x<7s}", "result")
-    _test("{0:x<8s}", "result")
-    _test("{0: <7s}", "result")
-    _test("{0:<7s}", "result")
-    _test("{0:>7s}", "result")
-    _test("{0:>8s}", "result")
-    _test("{0:=8s}", "result")
-    _test("{0:^8s}", "result")
-    _test("{0:^9s}", "result")
-    _test("{0:^10s}", "result")
+    _test(fstring, value)
 
 
 def test_escape_re_characters():
@@ -58,113 +64,145 @@ def test_int():
 
 
 @pytest.mark.xfail
-def test_int_failure():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("{0:()d}", -123),
+        ("{0:1000d}", 100),
+        ("{0:<d}", 1),
+        ("{0:>d}", 1),
+        ("{0:=d}", 1),
+        ("{0:^d}", 1),
+        ("{0:<d}", -1),
+        ("{0:>d}", -1),
+        ("{0:=d}", -1),
+        ("{0:^d}", -1),
+        ("{0:<10d}", 0),
+        ("{0:<10d}", 123),
+        ("{0:<10d}", -123),
+        ("{0:>10d}", 123),
+        ("{0:>10d}", -123),
+        ("{0:^10d}", 123),
+        ("{0:^10d}", -123),
+        ("{0:=10d}", 123),
+        ("{0:=+10d}", 123),
+        ("{0:=10d}", -123),
+        ("{0:=+10d}", -123),
+        ("{0:=()10d}", 123),
+        ("{0:=()10d}", -123),
+        ("{0:>()10d}", -123),
+        ("{0:<()10d}", -123),
+        ("{0:^()10d}", -123),
+        ("{0:d}", 10**100),
+        ("{0:d}", -(10**100)),
+        ("{0:+d}", 10**100),
+        ("{0:()d}", -(10**100)),
+        ("{0:()110d}", -(10**100)),
+        ("{0:()110d}", -(10**100)),
+    ],
+)
+def test_int_failure(fstring, value):
     "Unimplemented features for int"
-    _test("{0:()d}", -123)
-
-    _test("{0:1000d}", 100)
-
-    _test("{0:<d}", 1)
-    _test("{0:>d}", 1)
-    _test("{0:=d}", 1)
-    _test("{0:^d}", 1)
-    _test("{0:<d}", -1)
-    _test("{0:>d}", -1)
-    _test("{0:=d}", -1)
-    _test("{0:^d}", -1)
-
-    _test("{0:<10d}", 0)
-    _test("{0:<10d}", 123)
-    _test("{0:<10d}", -123)
-    _test("{0:>10d}", 123)
-    _test("{0:>10d}", -123)
-    _test("{0:^10d}", 123)
-    _test("{0:^10d}", -123)
-    _test("{0:=10d}", 123)
-    _test("{0:=+10d}", 123)
-    _test("{0:=10d}", -123)
-    _test("{0:=+10d}", -123)
-    _test("{0:=()10d}", 123)
-
-    _test("{0:=()10d}", -123)
-    _test("{0:>()10d}", -123)
-    _test("{0:<()10d}", -123)
-    _test("{0:^()10d}", -123)
-
-    _test("{0:d}", 10**100)
-    _test("{0:d}", -(10**100))
-    _test("{0:+d}", 10**100)
-    _test("{0:()d}", -(10**100))
-    _test("{0:()110d}", -(10**100))
-    _test("{0:()110d}", -(10**100))
+    _test(fstring, value)
 
 
-def test_binary():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("before {0:b} after", 42),
+        ("{0:b}", 0),
+        ("{0:b}", 42),
+        ("{0:b}", -42),
+        ("{0:#b}", 42),
+        ("{0:#b}", -42),
+    ],
+)
+def test_binary(fstring, value):
     "Parse single binary"
-    _test("before {0:b} after", 42)
-    _test("{0:b}", 0)
-    _test("{0:b}", 42)
-    _test("{0:b}", -42)
-
-    _test("{0:#b}", 42)
-    _test("{0:#b}", -42)
 
 
 @pytest.mark.xfail
-def test_binary_failure():
-    _test("{0:<10b}", 0)
-    _test("{0:>10b}", 0)
-    _test("{0:<10b}", 9)
-    _test("{0:>10b}", 9)
-    _test("{0:^10b}", 9)
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("{0:<10b}", 0),
+        ("{0:>10b}", 0),
+        ("{0:<10b}", 9),
+        ("{0:>10b}", 9),
+        ("{0:^10b}", 9),
+        ("{0:()b}", -(2**100 - 1)),
+        ("{0:=()200b}", -(2**100 - 1)),
+    ],
+)
+def test_binary_failure(fstring, value):
+    _test(fstring, value)
 
-    _test("{0:()b}", -(2**100 - 1))
-    _test("{0:=()200b}", -(2**100 - 1))
 
-
-def test_octal():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("before {0:o} after", 42),
+        ("before {0:#o} after", 42),
+        ("before {0:o} after", -42),
+        ("before {0:#o} after", -42),
+    ],
+)
+def test_octal(fstring, value):
     "Parse single octal"
-    _test("before {0:o} after", 42)
-    _test("before {0:#o} after", 42)
-    _test("before {0:o} after", -42)
-    _test("before {0:#o} after", -42)
+    _test(fstring, value)
 
 
-def test_hex():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("before {0:x} after", 42),
+        ("before {0:X} after", 42),
+        ("before {0:#x} after", 42),
+        ("before {0:#X} after", 42),
+        ("before {0:x} after", -42),
+        ("before {0:X} after", -42),
+        ("before {0:#x} after", -42),
+        ("before {0:#X} after", -42),
+    ],
+)
+def test_hex(fstring, value):
     "Parse single hex (lower and uppercase)"
-    _test("before {0:x} after", 42)
-    _test("before {0:X} after", 42)
 
-    _test("before {0:#x} after", 42)
-    _test("before {0:#X} after", 42)
-
-    _test("before {0:x} after", -42)
-    _test("before {0:X} after", -42)
-
-    _test("before {0:#x} after", -42)
-    _test("before {0:#X} after", -42)
+    _test(fstring, value)
 
 
-def test_fp_exp():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [("before {0:e} after", 42.123e-10), ("before {0:E} after", 42.123e-10)],
+)
+def test_fp_exp(fstring, value):
     "Parse single floating point exponential format (lower and uppercase)"
-    _test("before {0:e} after", 42.123e-10)
-    _test("before {0:E} after", 42.123e-10)
+    _test(fstring, value)
 
 
-def test_fp_decimal():
+@pytest.mark.parametrize(
+    "fstring, value", [("before {0:f} after", 42.123), ("before {0:F} after", 42.123)]
+)
+def test_fp_decimal(fstring, value):
     "Parse single Floating point decimal format."
-    _test("before {0:f} after", 42.123)
-    _test("before {0:F} after", 42.123)
+
+    _test(fstring, value)
 
 
-def test_fp_auto():
+@pytest.mark.parametrize(
+    "fstring, value",
+    [
+        ("before {0:g} after", 42.123),
+        ("before {0:G} after", 42.123),
+        ("before {0:g} after", 42.123e-10),
+        ("before {0:G} after", 42.123e-10),
+    ],
+)
+def test_fp_auto(fstring, value):
     """Floating point format. Uses exponential format if exponent is
     greater than -4 or less than precision, decimal format otherwise.
     """
-    _test("before {0:g} after", 42.123)
-    _test("before {0:G} after", 42.123)
-    _test("before {0:g} after", 42.123e-10)
-    _test("before {0:G} after", 42.123e-10)
+    _test(fstring, value)
 
 
 def test_percent():
