@@ -15,7 +15,8 @@
 import copy
 import re
 import string
-import sys
+from functools import partial
+from io import StringIO
 from re import (  # noqa: F401
     DOTALL,
     IGNORECASE,
@@ -30,14 +31,6 @@ from re import (  # noqa: F401
     U,
     X,
 )
-
-if sys.version_info[0] < 3:
-    from StringIO import StringIO
-else:
-    from io import StringIO
-
-from collections import OrderedDict
-from functools import partial
 
 
 class Dummy:
@@ -78,7 +71,8 @@ _REG = {
 #    sign        ::=  "+" | "-" | " "
 #    width       ::=  integer
 #    precision   ::=  integer
-#    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
+#    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o"
+#                     | "s" | "x" | "X" | "%"
 _FMT = re.compile(
     "(?P<align>(?P<fill>[^{}])?[<>=\\^])?"
     "(?P<sign>[\\+\\- ])?(?P<alternate>#)?"
@@ -275,7 +269,6 @@ class Parser(object):
     """
 
     def __init__(self, format_string, flags=0):
-
         # List of tuples (name of the field, converter function)
         self._fields = []
 
@@ -289,7 +282,7 @@ class Parser(object):
         # Assembly regex, list of fields, converter function,
         # and output template data structure by inspecting
         # each replacement field.
-        template = OrderedDict()
+        template = dict()
         for literal, field, fmt, conv in _FORMATTER.parse(format_string):
             pattern.write(re.escape(literal))
 
@@ -319,7 +312,6 @@ class Parser(object):
         self._regex = re.compile("^" + pattern.getvalue() + "$", flags)
 
     def __call__(self, text):
-
         # Try to match the text with the stored regex
         mobj = self._regex.search(text)
         if mobj is None:

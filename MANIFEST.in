@@ -1,4 +1,4 @@
-include README.rst LICENSE CHANGES
+include README.md LICENSE CHANGES
 include stringparser.py
 exclude .editorconfig bors.toml pull_request_template.md requirements_docs.txt version.py
 exclude .coveragerc .pre-commit-config.yaml tests/*

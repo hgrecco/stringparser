@@ -1,0 +1,54 @@
+[project]
+name = "stringparser"
+authors = [
+  {name="Hernan E. Grecco", email="hernan.grecco@gmail.com"}
+]
+license = {text = "BSD-3-Clause"}
+description = "Easy to use pattern matching and information extraction"
+keywords = ["string", "parsing", "PEP3101", "regex"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Text Processing",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dynamic = ["dependencies", "optional-dependencies", "version"]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["stringparser"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
+optional-dependencies.test = {file = "requirements.test.txt"}
+
+[project.urls]
+"Homepage" = "https://github.com/hgrecco/stringparser"
+"Bug Tracker" = "https://github.com/hgrecco/stringparser/issues"
+
+[tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+pythonpath = "."
+
+[tool.ruff]
+select = ["E", "F", "I"]
+extend-include = ["*.ipynb"]
