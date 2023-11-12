@@ -331,12 +331,14 @@ class Parser(object):
     _fields: list[
         tuple[
             str,
-            type
-            | Callable[
-                [
-                    str,
+            Union[
+                type,
+                Callable[
+                    [
+                        str,
+                    ],
+                    Any,
                 ],
-                Any,
             ],
         ]
     ]
@@ -350,7 +352,7 @@ class Parser(object):
     # Compiled regex pattern
     _regex: re.Pattern[str]
 
-    def __init__(self, format_string: str, flags: re.RegexFlag = re.RegexFlag.NOFLAG):
+    def __init__(self, format_string: str, flags: Union[re.RegexFlag, int] = 0):
         self._fields = []
         self._output_as_dict = False
 
