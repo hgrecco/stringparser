@@ -44,14 +44,14 @@ You can retrieve many fields:
 
 ```python
 >>> Parser('The {:s} is {:d}')('The answer is 42')
-('answer', 42)
+['answer', 42]
 ```
 
-And you can use numbered fields to order the returned tuple:
+And you can use numbered fields to order the returned list:
 
 ```python
 >>> Parser('The {1:s} is {0:d}')('The answer is 42')
-(42, 'answer')
+[42, 'answer']
 ```
 
 Or named fields to return an OrderedDict:
@@ -68,14 +68,30 @@ You can ignore some fields using _ as a name:
 42
 ```
 
+You can parse into an object attribute:
+
+```python
+>>> obj = Parser('The {0.name:s} is {0.value:d}')('The answer is 42')
+>>> obj.name
+'answer'
+>>> obj.value
+'42'
+```
+
+You can parse even parse into an nested structues:
+
+```python
+>>> obj = Parser('The {0.content[name]:s} is {0.content[value]:d}')('The answer is 42')
+>>> obj.content
+{'name': 'answer', 'value': 42}
+```
+
 # Limitations
 
 - From the format string:
-  \[\[\[fill\]align\]\[sign\]\[#\]\[0\]\[minimumwidth\]\[.precision\]\[type\]\]{.title-ref}
-  only \[type\]{.title-ref}, \[sign\]{.title-ref} and \[#\]{.title-ref} are
+  `[[fill]align][sign][#][0][width][,][.precision][type]`
+  only `[type]`, `[sign]` and `[#]` are
   currently implemented. This might cause trouble to match certain
-  notation like:
-  - decimal: '-4' written as '- 4'
-  - etc
-- Lines are matched from beginning to end. {:d} will NOT return all
+  notation like: decimal `-4` written as `- 4`.
+- Lines are matched from beginning to end. `{:d}` will NOT return all
   the numbers in the string. Use regex for that.
