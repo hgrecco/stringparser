@@ -35,6 +35,16 @@ def test_string():
 @pytest.mark.xfail
 @pytest.mark.parametrize(
     "fstring, value",
+    [("{0:K<7s}", "result"), ("{0:/d}", "result")],
+)
+def test_invalid_fstring(fstring, value):
+    "Invalid fstrings"
+    _test(fstring, value)
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    "fstring, value",
     [
         ("{0:x<7s}", "result"),
         ("{0:x<8s}", "result"),
@@ -46,6 +56,7 @@ def test_string():
         ("{0:^8s}", "result"),
         ("{0:^9s}", "result"),
         ("{0:^10s}", "result"),
+        ("{0:#b}", "result"),
     ],
 )
 def test_string_failure(fstring, value):
@@ -95,6 +106,8 @@ def test_int():
         ("{0:^()10d}", -123),
         ("{0:d}", 10**100),
         ("{0:d}", -(10**100)),
+        ("{0: d}", 10**100),
+        ("{0:-d}", -(10**100)),
         ("{0:+d}", 10**100),
         ("{0:()d}", -(10**100)),
         ("{0:()110d}", -(10**100)),
@@ -219,11 +232,10 @@ def test_named():
     _test_dict("before {a:d} in between {b:d} after", a=42, b=23)
 
 
-@pytest.mark.xfail
 def test_attributes():
     h = Dummy()
     h.first = "something"
-    h.seccond = "else"
+    h.second = "else"
 
     fmt = "before {0.first} after"
     text = fmt.format(h)
@@ -236,11 +248,21 @@ def test_attributes():
     assert obj.first == h.first
     assert obj.second == h.second
 
+
+def test_attributes_2_objects():
+    h1 = Dummy()
+    h1.first = "some1thing"
+    h1.second = "el1se"
+
+    h2 = Dummy()
+    h2.first = "some2thing"
+    h2.second = "el2se"
+
     fmt = "before {0.first} in between {1.second} after"
-    text = fmt.format(h)
+    text = fmt.format(h1, h2)
     obj1, obj2 = Parser(fmt)(text)
-    assert obj1.first == h.first
-    assert obj2.second == h.second
+    assert obj1.first == h1.first
+    assert obj2.second == h2.second
 
 
 def test_items():
