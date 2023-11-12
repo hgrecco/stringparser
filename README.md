@@ -10,8 +10,7 @@
 
 The `stringparser` module provides a simple way to match patterns and
 extract information within strings. As patterns are given using the
-familiar format string specification `3101`{.interpreted-text
-role="pep"}, writing them is much easier than writing regular
+familiar format string specification [3101](https://peps.python.org/pep-3101/)., writing them is much easier than writing regular
 expressions (albeit less powerful).
 
 Just install it using:
