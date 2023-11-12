@@ -52,23 +52,24 @@ class Dummy:
 
 _FORMATTER = string.Formatter()
 
+# This is due to the fact that int, float, etc
+# are not recognized as Callable[[str, ], Any]
+STRCALLABLE: TypeAlias = Union[
+    type,
+    Callable[
+        [
+            str,
+        ],
+        Any,
+    ],
+]
+
+REGEX2CONVERTER: TypeAlias = tuple[str, STRCALLABLE]
+
 # This dictionary maps each format type to a tuple containing
 #   1. The regular expression to match the string
 #   2. A callable that will used to convert the matched string into the
 #      appropriate Python object.
-
-REGEX2CONVERTER: TypeAlias = tuple[
-    str,
-    Union[
-        type,
-        Callable[
-            [
-                str,
-            ],
-            Any,
-        ],
-    ],
-]
 
 _REG: dict[Optional[str], REGEX2CONVERTER] = {
     None: (".*?", str),
@@ -120,7 +121,7 @@ def fmt_to_regex(fmt: str) -> REGEX2CONVERTER:
 
     matched = _FMT.search(fmt)
 
-    if matched is None:
+    if matched is None:  # pragma: no cover
         raise ValueError(f"Could not parse the formatting string {fmt}")
 
     (
@@ -137,13 +138,13 @@ def fmt_to_regex(fmt: str) -> REGEX2CONVERTER:
 
     try:
         reg, fun = _REG[ctype]  # typing: ignore
-    except KeyError:
+    except KeyError:  # pragma: no cover
         raise ValueError("{} is not an valid type".format(ctype))
 
     if alternate:
         if ctype in ("o", "x", "X", "b"):
             reg = "0" + ctype + reg
-        else:
+        else:  # pragma: no cover
             raise ValueError("Alternate form (#) not allowed in {} type".format(ctype))
 
     if sign == "-" or sign is None:
@@ -152,7 +153,7 @@ def fmt_to_regex(fmt: str) -> REGEX2CONVERTER:
         reg = "[-+]" + reg
     elif sign == " ":
         reg = "[- ]" + reg
-    else:
+    else:  # pragma: no cover
         raise ValueError("{} is not a valid sign".format(sign))
 
     return reg, fun
@@ -177,7 +178,7 @@ def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
         key = keyparts[0]
 
         # Empty strings are not allowed as field names
-        if key == "":
+        if key == "":  # pragma: no cover
             raise ValueError("empty field name in {}".format(name))
 
         # The first name in the sequence is used to index
@@ -193,7 +194,7 @@ def split_field_name(name: str) -> Generator[ITEM_ATTR, None, None]:
         # the first part.
         for key in keyparts[1:]:
             endbracket = key.find("]")
-            if endbracket < 0 or endbracket != len(key) - 1:
+            if endbracket < 0 or endbracket != len(key) - 1:  # pragma: no cover
                 raise ValueError("Invalid field syntax in {}".format(name))
 
             # Strip off the closing bracket and try to coerce to int
@@ -234,7 +235,7 @@ def append_to_hierarchy(
     """
     for typ_, name in field_parts:
         if isinstance(bottom, dict):
-            if not typ_ == "item":
+            if not typ_ == "item":  # pragma: no cover
                 raise ValueError("Incompatible {}, {}".format(typ_, name))
             try:
                 bottom = bottom[name]
@@ -242,13 +243,13 @@ def append_to_hierarchy(
                 bottom[name] = build_hierarchy(field_parts, top)
 
         elif isinstance(bottom, Dummy):
-            if not typ_ == "attribute":
+            if not typ_ == "attribute":  # pragma: no cover
                 raise ValueError("Incompatible {}, {}".format(typ_, name))
             try:
                 bottom = getattr(bottom, name)
-            except AttributeError:
+            except AttributeError:  # pragma: no cover
                 setattr(bottom, name, build_hierarchy(field_parts, top))
-        else:
+        else:  # pragma: no cover
             raise ValueError("Incompatible {}, {}".format(typ_, name))
 
 
@@ -328,20 +329,7 @@ class Parser(object):
     """
 
     # List of tuples (name of the field, converter function)
-    _fields: list[
-        tuple[
-            str,
-            Union[
-                type,
-                Callable[
-                    [
-                        str,
-                    ],
-                    Any,
-                ],
-            ],
-        ]
-    ]
+    _fields: list[tuple[str, STRCALLABLE]]
 
     # If any of the fields has a non-numeric name, this variable is toggled
     # and the return is a dictionary

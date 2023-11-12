@@ -5,6 +5,7 @@ omit =
 [report]
 # Regexes for lines to exclude from consideration
 exclude_lines =
+    @overload
     # Have to re-enable the standard pragma
     pragma: no cover
 
