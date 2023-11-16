@@ -1,7 +1,17 @@
-0.7 (unreleased)
+0.7 (2023-11-15)
 ----------------
 
-- Migrated project to modern framework.
+- Modernize project infrastructure.
+  - Changed to pyproject.toml
+  - Changed to ruff and ruff-format
+  - Changed to pytest
+  - Add publish to github actions
+  - Migrated readme from rst to md
+  - Use dict instead of OrderedDict
+- Moved docstring to NumPy style
+- Add typing information.
+- Minimum Python now is Python 3.9+.
+- Documented ObjectLike output.
 
 
 0.6 (2022-10-26)
